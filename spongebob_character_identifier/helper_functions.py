@@ -313,7 +313,7 @@ def load_model(input_shape: int,
                model_save_path: str,
                device: str = "cpu",
                seed: int = None):
-    torch.manual_seed(seed)
+    if seed: torch.manual_seed(seed)
     loaded_model = model_builder.TinyVGG(
         input_shape=input_shape,
         hidden_units=hidden_units,

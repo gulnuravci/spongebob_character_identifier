@@ -5,6 +5,8 @@ from pathlib import Path
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
+NUM_WORKERS = os.cpu_count()
+
 def import_data_from_github(data_name, github_raw_url):
     # Setup path to a data folder
     data_path = Path("data/")
@@ -45,7 +47,6 @@ def import_data_from_github(data_name, github_raw_url):
         
         print("Import complete.")
 
-NUM_WORKERS = os.cpu_count()
 def create_dataloaders(train_dir: str,
                        test_dir: str,
                        train_transform: transforms.Compose,

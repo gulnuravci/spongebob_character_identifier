@@ -3,9 +3,9 @@ import torch
 import data_setup, engine, model_builder, utils, helper_functions
 
 from pathlib import Path
-from torchvision import transforms, datasets
+from torchvision import transforms
 # Import data
-DATA_NAME = "training_data"
+DATA_NAME = "character_images"
 GITHUB_URL = "https://github.com/gulnuravci/spongebob_character_identifier/raw/main/data.zip"
 data_setup.import_data_from_github(data_name=DATA_NAME, github_raw_url=GITHUB_URL)
 
@@ -33,6 +33,7 @@ LEARNING_RATE = 0.001
 train_transform = transforms.Compose([
     # Resize image
     transforms.Resize(size=(64, 64)),
+    transforms.TrivialAugmentWide(num_magnitude_bins=10),
     # Turn image into torch.Tensor
     transforms.ToTensor()
 ])
