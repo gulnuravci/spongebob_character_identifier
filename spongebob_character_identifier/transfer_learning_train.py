@@ -40,7 +40,7 @@ WeightsEnum.get_state_dict = get_state_dict
 
 # Setup the model with pretrained weights and send it to the target device
 weights = EfficientNet_B0_Weights.DEFAULT # .DEFAULT = best available weights from pretraining on ImageNet
-model = efficientnet_b0(weights=weights).to(device=device, dtype=torch.float32)
+model = efficientnet_b0(weights=weights).to(device=device)
 
 # Summary before freezing "features" section of the model
 utils.summarize_model(model=model, 
