@@ -1,6 +1,7 @@
 import os
 import requests
 import zipfile
+import torch
 from pathlib import Path
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
@@ -43,7 +44,7 @@ def import_data_from_github(data_name, github_raw_url):
             os.rmdir(macosx_folder)
         
         # Remove zip file after unzipping
-        os.remove("data/training_data.zip")
+        os.remove(f"data/{data_name}.zip")
         
         print("Import complete.")
 
@@ -52,6 +53,7 @@ def create_dataloaders(train_dir: str,
                        train_transform: transforms.Compose,
                        test_transform: transforms.Compose,
                        batch_size: int,
+                       device:torch.device,
                        num_workers: int=0):
     """Creates training and testing DataLoaders.
 
@@ -80,7 +82,7 @@ def create_dataloaders(train_dir: str,
         train_data,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=num_workers,
+        num_workers=num_workers
     )
     test_dataloader = DataLoader(
         test_data,
@@ -88,5 +90,7 @@ def create_dataloaders(train_dir: str,
         shuffle=False,
         num_workers=num_workers
     )
+
+    # generator=torch.Generator(device=device)
 
     return train_dataloader, test_dataloader, class_names

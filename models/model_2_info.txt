@@ -1,0 +1,17 @@
+MODEL_NAME: model_2
+MODEL RESULTS FOR LAST EPOCH:
+    TRAIN LOSS: 1.3555689930915833
+    TRAIN ACC: 0.5333333333333333
+    TEST LOSS: 1.3415707498788834
+    TEST ACC: 0.55859375
+
+TRAIN DATALOADER LENGTH: 30
+TEST DATALOADER LENGTH: 8
+IMAGE_SIZE: 64x64
+BATCH_SIZE: 32
+
+NUM_EPOCHS: 10
+HIDDEN_UNITS: 10
+LEARNING_RATE: 0.001
+
+NOTES: Extra convolution layer (3 total). No data augmentation used. *UPDATE* It actually performed really well, train and test acc consistently moving in the same direction and very close to each other. But need to train for more epochs to figure out the breaking point and see how good the model can get without overfitting.

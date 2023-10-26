@@ -1,0 +1,17 @@
+MODEL_NAME: model_4
+MODEL RESULTS FOR LAST EPOCH:
+    TRAIN LOSS: 0.7808546433846156
+    TRAIN ACC: 0.7416666666666667
+    TEST LOSS: 1.264754131436348
+    TEST ACC: 0.640625
+
+TRAIN DATALOADER LENGTH: 30
+TEST DATALOADER LENGTH: 8
+IMAGE_SIZE: 64x64
+BATCH_SIZE: 32
+
+NUM_EPOCHS: 30
+HIDDEN_UNITS: 10
+LEARNING_RATE: 0.001
+
+NOTES: Extra convolution layer (3 total) with even more epoch trained. No data augmentation used. *UPDATE* 30 epochs was too much, 20 might be enough for the extra convolutional layer.
