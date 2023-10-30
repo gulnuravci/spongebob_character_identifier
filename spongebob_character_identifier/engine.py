@@ -4,9 +4,6 @@ from tqdm.auto import tqdm
 from typing import Dict, List, Tuple
 from torch.utils.tensorboard import SummaryWriter
 
-# Create a writer with all default settings
-writer = SummaryWriter()
-
 def train_step(model: torch.nn.Module,
                dataloader: torch.utils.data.DataLoader,
                loss_fn: torch.nn.Module,
@@ -36,7 +33,7 @@ def train_step(model: torch.nn.Module,
     for batch, (X, y) in enumerate(dataloader):
         # Send data to target device
         X, y = X.to(device), y.to(device)
-        
+
         # 1. Forward pass
         y_pred = model(X)
 
@@ -116,7 +113,9 @@ def train(model: torch.nn.Module,
           optimizer: torch.optim.Optimizer,
           loss_fn: torch.nn.Module,
           epochs: int,
-          device: torch.device) -> Dict[str, List]:
+          device: torch.device,
+          writer: torch.utils.tensorboard.writer.SummaryWriter # new parameter to take in a writer
+          ) -> Dict[str, List]:
   """Trains and tests a PyTorch model.
 
   Passes a target PyTorch models through train_step() and test_step()
@@ -182,24 +181,21 @@ def train(model: torch.nn.Module,
       results["test_loss"].append(test_loss)
       results["test_acc"].append(test_acc)
 
-      # Add loss results to SummaryWriter
-      writer.add_scalars(main_tag="Loss",
-                         tag_scalar_dict={"train_loss": train_loss,
-                                          "test_loss": test_loss},
-                          global_step=epoch)
+      if writer:
+        # Add results to SummaryWriter
+        writer.add_scalars(main_tag="Loss",
+                           tag_scalar_dict={"train_loss": train_loss,
+                                            "test_loss": test_loss},
+                            global_step=epoch)
+        writer.add_scalars(main_tag="Accuracy",
+                           tag_scalar_dict={"train_acc": train_acc,
+                                            "test_acc": test_acc},
+                            global_step=epoch)
 
-      # Add accuracy results to SummaryWriter
-      writer.add_scalars(main_tag="Accuracy", 
-                          tag_scalar_dict={"train_acc": train_acc,
-                                          "test_acc": test_acc}, 
-                          global_step=epoch)
-      
-      # Track the PyTorch model architecture
-      writer.add_graph(model=model, 
-                        # Pass in an example input
-                        input_to_model=torch.randn(32, 3, 224, 224).to(device))
-  # Close the writer
-  writer.close()
-  
+        # Close the writer
+        writer.close()
+      else:
+            pass
+    
   # Return the filled results at the end of the epochs
   return results

@@ -1,10 +1,10 @@
 import torch
-import data_setup, engine, utils
+import data_setup, engine, utils, transfer_learning_model_builder
 
 from pathlib import Path
 from timeit import default_timer as timer 
 from torch import nn
-from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+from torchvision.models import efficientnet_b0, efficientnet_b2, EfficientNet_B0_Weights, EfficientNet_B2_Weights
 from torchvision.models._api import WeightsEnum
 from torch.hub import load_state_dict_from_url
 
@@ -19,44 +19,38 @@ train_dir = data_dir / "train"
 test_dir = data_dir / "test"
 
 # Setup target device
-device = utils.setup_target_device()
-# Set the device globally
-torch.set_default_device(device)
+device = utils.setup_target_device(device="cpu")
 
 # Set the name of the model to save
-MODEL_NAME = "model_efficientnet_b0_third_run"
-NOTES = "Using transfer learning with PyTorch pre-trained model -> efficientnet_b0"
+MODEL_NAME = "model_efficientnet_b2"
+NOTES = "Using transfer learning with PyTorch pre-trained model 'efficientnet_b2'"
 
 # Setup hyperparameters
-NUM_EPOCHS = 3
+NUM_EPOCHS = 10
 BATCH_SIZE = 32
 LEARNING_RATE = 0.001
+OUT_FEATURES = 10
 
-# Fix for wrong hash error from: https://github.com/pytorch/vision/issues/7744
-def get_state_dict(self, *args, **kwargs):
-    kwargs.pop("check_hash")
-    return load_state_dict_from_url(self.url, *args, **kwargs)
-WeightsEnum.get_state_dict = get_state_dict
+# Create model
+effnetb2 = transfer_learning_model_builder.create_effnetb2(out_features=OUT_FEATURES,
+                                                           device=device)
 
-# Setup the model with pretrained weights and send it to the target device
-weights = EfficientNet_B0_Weights.DEFAULT # .DEFAULT = best available weights from pretraining on ImageNet
-model = efficientnet_b0(weights=weights).to(device=device)
-
-# Summary before freezing "features" section of the model
-utils.summarize_model(model=model, 
-                                 input_size=(32, 3, 224, 224),
-                                 col_names=["input_size", "output_size", "num_params", "trainable"],
-                                 col_width=20,
-                                 row_settings=["var_names"])
-
-# Get the transforms used to create pretrained weights
+# Get transform
+weights = EfficientNet_B2_Weights.DEFAULT
 auto_transforms = weights.transforms()
 
-# # Plot transforms to visualize
-# utils.plot_transformed_images(image_path=data_dir,
-#                                          transform=auto_transforms, 
-#                                          n=3,
-#                                          seed=None)
+# Summary before freezing "features" section of the model
+utils.summarize_model(model=effnetb2,
+                      input_size=(32, 3, 224, 224),
+                      col_names=["input_size", "output_size", "num_params", "trainable"],
+                      col_width=20,
+                      row_settings=["var_names"])
+
+# Plot transforms to visualize
+utils.plot_transformed_images(image_path=data_dir,
+                              transform=auto_transforms,
+                              n=3,
+                              seed=None)
 
 # Create training and testing DataLoaders as well as get a list of class names
 train_dataloader, test_dataloader, class_names = data_setup.create_dataloaders(train_dir=train_dir,
@@ -66,33 +60,16 @@ train_dataloader, test_dataloader, class_names = data_setup.create_dataloaders(t
                                                                                batch_size=BATCH_SIZE,
                                                                                device=device)
 
-# Freeze all base layers in the "features" section of the model (the feature extractor) by setting requires_grad=False
-for param in model.features.parameters():
-    param.requires_grad = False
-
-# Set seeds
-torch.manual_seed(42)
-
-# Get the length of class_names (one output unit for each class)
-output_shape = len(class_names)
-
-# Recreate the classifier layer and seed it to the target device
-model.classifier = torch.nn.Sequential(
-    torch.nn.Dropout(p=0.2, inplace=True), 
-    torch.nn.Linear(in_features=1280, 
-                    out_features=output_shape,
-                    bias=True)).to(device)
-
 # Summary after freezing the "features" section of the model and changing the output classifier layer
-utils.summarize_model(model=model, 
-                                 input_size=(32, 3, 224, 224),
-                                 col_names=["input_size", "output_size", "num_params", "trainable"],
-                                 col_width=20,
-                                 row_settings=["var_names"])
+utils.summarize_model(model=effnetb2,
+                      input_size=(32, 3, 224, 224),
+                      col_names=["input_size", "output_size", "num_params", "trainable"],
+                      col_width=20,
+                      row_settings=["var_names"])
 
 # Define loss and optimizer
 loss_fn = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),
+optimizer = torch.optim.Adam(effnetb2.parameters(),
                              lr=LEARNING_RATE)
 
 # # Attempt a forward pass
@@ -106,43 +83,46 @@ torch.manual_seed(42)
 start_time = timer()
 
 # Setup training and save the results
-model_results = engine.train(model=model,
-                       train_dataloader=train_dataloader,
-                       test_dataloader=test_dataloader,
-                       optimizer=optimizer,
-                       loss_fn=loss_fn,
-                       epochs=NUM_EPOCHS,
-                       device=device)
+model_results = engine.train(model=effnetb2,
+                             train_dataloader=train_dataloader,
+                             test_dataloader=test_dataloader,
+                             optimizer=optimizer,
+                             loss_fn=loss_fn,
+                             epochs=NUM_EPOCHS,
+                             device=device,
+                             writer=utils.create_writer(experiment_name="original",
+                                                 model_name=MODEL_NAME,
+                                                 extra=f"{NUM_EPOCHS}_epochs"))
 
 # End the timer and print out how long it took
 end_time = timer()
 print(f"[INFO] Total training time: {end_time-start_time:.3f} seconds")
 
 # Save the model
-utils.save_model_with_hyperparameters(model=model,
-                                                 model_results=model_results,
-                                                 target_dir="models", 
-                                                 model_name=MODEL_NAME, 
-                                                 num_epochs=NUM_EPOCHS,
-                                                 batch_size=BATCH_SIZE,
-                                                 hidden_units="N/A",
-                                                 learning_rate=LEARNING_RATE,
-                                                 image_size="224x224",
-                                                 train_dataloader_length=len(train_dataloader), 
-                                                 test_dataloader_length=len(test_dataloader),
-                                                 notes=NOTES)
+utils.save_model_with_hyperparameters(model=effnetb2,
+                                      model_results=model_results,
+                                      target_dir="models",
+                                      model_name=MODEL_NAME,
+                                      num_epochs=NUM_EPOCHS,
+                                      batch_size=BATCH_SIZE,
+                                      hidden_units="N/A",
+                                      learning_rate=LEARNING_RATE,
+                                      image_size="224x224",
+                                      train_dataloader_length=len(train_dataloader),
+                                      test_dataloader_length=len(test_dataloader),
+                                      notes=NOTES)
 
 # Plot loss curves
 utils.plot_loss_curves(results=model_results)
 
 # Plot predictions
-utils.plot_predictions(model=model,
-                                  test_dir=test_dir,
-                                  data_transform=auto_transforms)
+utils.plot_predictions(model=effnetb2,
+                       test_dir=test_dir,
+                       data_transform=auto_transforms)
 
 # Plot confusion matrix
-utils.confusion_matrix(model=model,
-                                  test_dataloader=test_dataloader,
-                                  test_dir = test_dir,
-                                  test_transform=auto_transforms,
-                                  device=device)
+utils.confusion_matrix(model=effnetb2,
+                       test_dataloader=test_dataloader,
+                       test_dir = test_dir,
+                       test_transform=auto_transforms,
+                       device=device)
