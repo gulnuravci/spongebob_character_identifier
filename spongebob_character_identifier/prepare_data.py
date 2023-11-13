@@ -130,7 +130,7 @@ def convert_and_split_data(source_dir, new_folder_name, train_percent, test_perc
                             train_percent=train_percent,
                             test_percent=test_percent)
 
-convert_and_split_data(source_dir="original_data",
-                       new_folder_name="data",
-                       train_percent=0.8,
-                       test_percent=0.2)
+# convert_and_split_data(source_dir="original_data",
+#                        new_folder_name="data",
+#                        train_percent=0.8,
+#                        test_percent=0.2)

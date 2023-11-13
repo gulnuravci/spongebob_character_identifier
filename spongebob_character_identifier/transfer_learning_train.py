@@ -39,13 +39,6 @@ effnetb2 = transfer_learning_model_builder.create_effnetb2(out_features=OUT_FEAT
 weights = EfficientNet_B2_Weights.DEFAULT
 auto_transforms = weights.transforms()
 
-# Summary before freezing "features" section of the model
-utils.summarize_model(model=effnetb2,
-                      input_size=(32, 3, 224, 224),
-                      col_names=["input_size", "output_size", "num_params", "trainable"],
-                      col_width=20,
-                      row_settings=["var_names"])
-
 # Plot transforms to visualize
 utils.plot_transformed_images(image_path=data_dir,
                               transform=auto_transforms,
